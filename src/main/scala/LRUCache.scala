@@ -1,17 +1,10 @@
 package com.github.dcameronmauch
 
-import java.util.concurrent.locks.{Lock, ReadWriteLock, ReentrantReadWriteLock}
 import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
 
 class LRUCache[K, V](private val initSize: Int) {
   require(initSize > 0)
-
-  // locks
-
-  private val masterLock: ReadWriteLock = new ReentrantReadWriteLock()
-  private val readLock: Lock = masterLock.readLock()
-  private val writeLock: Lock = masterLock.writeLock()
 
   // double linked list
 
@@ -26,38 +19,33 @@ class LRUCache[K, V](private val initSize: Int) {
 
   // size methods
 
-  def getCurrSize: Int = try {
-    readLock.lock()
+  def getCurrSize: Int = synchronized {
     map.size
-  } finally readLock.unlock()
+  }
 
-  def getMaxSize: Int = try {
-    readLock.lock()
+  def getMaxSize: Int = synchronized {
     maxSize
-  } finally readLock.unlock()
+  }
 
-  def setMaxSize(newSize: Int): Unit = try {
-    writeLock.lock()
+  def setMaxSize(newSize: Int): Unit = synchronized {
     require(newSize > 0)
     if (newSize < map.size) {
       val nodesToRemove: Int = map.size - newSize
       (1 to nodesToRemove).foreach(_ => evictNode())
     }
     maxSize = newSize
-  } finally writeLock.unlock()
+  }
 
   // value methods
 
-  def getValue(key: K): Option[V] = try {
-    writeLock.lock()
+  def getValue(key: K): Option[V] = synchronized {
     map.get(key).map(node => {
       moveNode(node)
       node.value
     })
-  } finally writeLock.unlock()
+  }
 
-  def setValue(key: K, value: V): Unit = try {
-    writeLock.lock()
+  def setValue(key: K, value: V): Unit = synchronized {
     if (map.contains(key)) {
       val node: Node = map(key)
       node.value = value
@@ -69,11 +57,9 @@ class LRUCache[K, V](private val initSize: Int) {
       map.addOne(key, node)
       addNode(node)
     }
-  } finally writeLock.unlock()
+  }
 
-  def getKeys(page: Int = 0, size: Int = 1000): List[K] = try {
-    readLock.lock()
-
+  def getKeys(page: Int = 0, size: Int = 1000): List[K] = synchronized {
     @tailrec
     def recurse(nodeOpt: Option[Node], skip: Int, remain: Int, acc: List[K]): List[K] =
       if (remain == 0 || nodeOpt.isEmpty) acc.reverse
@@ -81,7 +67,7 @@ class LRUCache[K, V](private val initSize: Int) {
       else recurse(nodeOpt.get.next, skip, remain - 1, nodeOpt.get.key :: acc)
 
     recurse(head, page * size, size, List.empty)
-  } finally readLock.unlock()
+  }
 
   // private methods
 
@@ -91,9 +77,15 @@ class LRUCache[K, V](private val initSize: Int) {
   }
 
   private def removeNode(node: Node): Unit = {
-    node.prev.foreach(_.next = node.next)
-    node.next.foreach(_.prev = node.prev)
-    if (node.next.isEmpty) tail = node.prev
+    if (node.prev.isEmpty)
+      head = node.next
+    else
+      node.prev.foreach(_.next = node.next)
+
+    if (node.next.isEmpty)
+      tail = node.prev
+    else
+      node.next.foreach(_.prev = node.prev)
   }
 
   private def addNode(node: Node): Unit = {

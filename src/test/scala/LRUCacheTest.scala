@@ -2,6 +2,10 @@ package com.github.dcameronmauch
 
 import org.scalatest.funsuite.AnyFunSuite
 
+import java.util.concurrent.Executors
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
+
 class LRUCacheTest extends AnyFunSuite {
   test("empty cache") {
     val cache: LRUCache[Int, String] = new LRUCache(4)
@@ -93,7 +97,7 @@ class LRUCacheTest extends AnyFunSuite {
     assertResult(List(2, 4, 3, 1))(cache.getKeys())
     assertResult(Some("zzz"))(cache.getValue(2))
   }
-  
+
   test("get keys paging") {
     val cache: LRUCache[Int, String] = new LRUCache(5)
 
@@ -106,5 +110,28 @@ class LRUCacheTest extends AnyFunSuite {
     assertResult(List(5, 4))(cache.getKeys(0, 2))
     assertResult(List(3, 2))(cache.getKeys(1, 2))
     assertResult(List(1))(cache.getKeys(2, 2))
+  }
+
+  test("multi-threaded writes") {
+    implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(9))
+
+    val cache: LRUCache[Int, String] = new LRUCache(9)
+
+    val futures: Future[List[Unit]] = Future.sequence(
+      List(
+        Future(cache.setValue(1, "abc")),
+        Future(cache.setValue(2, "def")),
+        Future(cache.setValue(3, "ghi")),
+        Future(cache.setValue(4, "jkl")),
+        Future(cache.setValue(5, "mno"))
+      )
+    )
+
+    futures.onComplete {
+      case Success(_) =>
+        assertResult(5)(cache.getCurrSize)
+      case Failure(e) =>
+        fail(e)
+    }
   }
 }
