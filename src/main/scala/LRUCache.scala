@@ -71,15 +71,16 @@ class LRUCache[K, V](private val initSize: Int) {
     }
   } finally writeLock.unlock()
 
-  def getKeys: List[K] = try {
+  def getKeys(page: Int = 0, size: Int = 1000): List[K] = try {
     readLock.lock()
 
     @tailrec
-    def recurse(nodeOpt: Option[Node], acc: List[K]): List[K] =
-      if (nodeOpt.isEmpty) acc.reverse
-      else recurse(nodeOpt.get.next, nodeOpt.get.key :: acc)
+    def recurse(nodeOpt: Option[Node], skip: Int, remain: Int, acc: List[K]): List[K] =
+      if (remain == 0 || nodeOpt.isEmpty) acc.reverse
+      else if (skip > 0) recurse(nodeOpt.get.next, skip - 1, remain, acc)
+      else recurse(nodeOpt.get.next, skip, remain - 1, nodeOpt.get.key :: acc)
 
-    recurse(head, List.empty)
+    recurse(head, page * size, size, List.empty)
   } finally readLock.unlock()
 
   // private methods
