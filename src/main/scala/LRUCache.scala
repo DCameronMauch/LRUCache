@@ -1,10 +1,17 @@
 package com.github.dcameronmauch
 
+import java.util.concurrent.locks.{Lock, ReadWriteLock, ReentrantReadWriteLock}
 import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
 
 class LRUCache[K, V](private val initSize: Int) {
   require(initSize > 0)
+
+  // locks
+
+  private val masterLock: ReadWriteLock = new ReentrantReadWriteLock()
+  private val readLock: Lock = masterLock.readLock()
+  private val writeLock: Lock = masterLock.writeLock()
 
   // double linked list
 
@@ -19,29 +26,38 @@ class LRUCache[K, V](private val initSize: Int) {
 
   // size methods
 
-  def getCurrSize: Int = synchronized { map.size }
+  def getCurrSize: Int = try {
+    readLock.lock()
+    map.size
+  } finally readLock.unlock()
 
-  def getMaxSize: Int = synchronized { maxSize }
+  def getMaxSize: Int = try {
+    readLock.lock()
+    maxSize
+  } finally readLock.unlock()
 
-  def setMaxSize(newSize: Int): Unit = synchronized {
+  def setMaxSize(newSize: Int): Unit = try {
+    writeLock.lock()
     require(newSize > 0)
     if (newSize < map.size) {
       val nodesToRemove: Int = map.size - newSize
       (1 to nodesToRemove).foreach(_ => evictNode())
     }
     maxSize = newSize
-  }
+  } finally writeLock.unlock()
 
   // value methods
 
-  def getValue(key: K): Option[V] = synchronized {
+  def getValue(key: K): Option[V] = try {
+    readLock.lock()
     map.get(key).map(node => {
       moveNode(node)
       node.value
     })
-  }
+  } finally readLock.unlock()
 
-  def setValue(key: K, value: V): Unit = synchronized {
+  def setValue(key: K, value: V): Unit = try {
+    writeLock.lock()
     if (map.contains(key)) {
       val node: Node = map(key)
       node.value = value
@@ -53,16 +69,18 @@ class LRUCache[K, V](private val initSize: Int) {
       map.addOne(key, node)
       addNode(node)
     }
-  }
+  } finally writeLock.unlock()
 
-  def getKeys: List[K] = synchronized {
+  def getKeys: List[K] = try {
+    readLock.lock()
+
     @tailrec
     def recurse(nodeOpt: Option[Node], acc: List[K]): List[K] =
       if (nodeOpt.isEmpty) acc.reverse
       else recurse(nodeOpt.get.next, nodeOpt.get.key :: acc)
 
     recurse(head, List.empty)
-  }
+  } finally readLock.unlock()
 
   // private methods
 
