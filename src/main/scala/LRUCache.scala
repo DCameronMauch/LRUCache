@@ -49,12 +49,12 @@ class LRUCache[K, V](private val initSize: Int) {
   // value methods
 
   def getValue(key: K): Option[V] = try {
-    readLock.lock()
+    writeLock.lock()
     map.get(key).map(node => {
       moveNode(node)
       node.value
     })
-  } finally readLock.unlock()
+  } finally writeLock.unlock()
 
   def setValue(key: K, value: V): Unit = try {
     writeLock.lock()
