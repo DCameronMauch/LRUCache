@@ -15,10 +15,7 @@ class LRWCache[K, V](private val initSize: Int) {
 
   // double linked list
 
-  private class Node(val key: K, var value: V, var prev: Option[Node] = None, var next: Option[Node] = None) {
-    override def toString: String =
-      s"Node(${key}, ${value}, ${prev.map(_.key)}, ${next.map{_.key}})"
-  }
+  private class Node(val key: K, var value: V, var prev: Option[Node] = None, var next: Option[Node] = None)
 
   // state variables
 

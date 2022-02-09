@@ -4,4 +4,4 @@ Key/Value cache with a maximum size.  If a new element is added to the cache, wh
 
 # Least Recently Written Cache
 
-Same concept, except only moved node to head of list when written.  So it is possible for a heavily read key to be evicted as writes occur.  But this implementation has the advantage that many threads can `get` the same time, since the operation does not modify the list.  They are only blocked by a `set`, which is still single thread access, but that should be a very small percentage of requests.
+Same concept, except only moves node to head of list when written.  So it is possible for a heavily read key to be evicted as writes occur.  But this implementation has the advantage that many threads can `get` the same time, since the operation does not modify the list.  They are only blocked by a `set`, which is still single thread access, but that should be a very small percentage of requests.
