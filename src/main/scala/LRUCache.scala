@@ -106,10 +106,9 @@ class LRUCache[K, V](private val initSize: Int) {
     if (tail.isEmpty) tail = Some(node)
   }
 
-  private def evictNode(): Unit = {
+  private def evictNode(): Unit =
     tail.foreach(node => {
       map.remove(node.key)
       removeNode(node)
     })
-  }
 }
