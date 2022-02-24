@@ -3,7 +3,7 @@ package com.github.dcameronmauch
 import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
 
-class LRUCache[K, V](private val initSize: Int) {
+class LRUCache[K, V](private val initSize: Int) extends Cache[K, V] {
   require(initSize > 0)
 
   // double linked list

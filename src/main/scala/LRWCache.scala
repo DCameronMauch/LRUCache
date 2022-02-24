@@ -4,7 +4,7 @@ import java.util.concurrent.locks.{Lock, ReadWriteLock, ReentrantReadWriteLock}
 import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
 
-class LRWCache[K, V](private val initSize: Int) {
+class LRWCache[K, V](private val initSize: Int) extends Cache[K, V] {
   require(initSize > 0)
 
   // locks
