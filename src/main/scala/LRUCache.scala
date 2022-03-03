@@ -58,6 +58,11 @@ class LRUCache[K, V](private val initSize: Int) extends Cache[K, V] {
     }
   }
 
+  def delValue(key: K): Unit = synchronized {
+    map.get(key).foreach(removeNode)
+    map.remove(key)
+  }
+
   def getKeys(page: Int = 0, size: Int = 1000): List[K] = synchronized {
     @tailrec
     def recurse(nodeOpt: Option[Node], skip: Int, remain: Int, acc: List[K]): List[K] =

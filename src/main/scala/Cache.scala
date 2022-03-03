@@ -6,4 +6,5 @@ trait Cache[K, V] {
   def setMaxSize(newSize: Int): Unit
   def getValue(key: K): Option[V]
   def setValue(key: K, value: V): Unit
+  def delValue(key: K): Unit
 }

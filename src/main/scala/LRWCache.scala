@@ -67,6 +67,12 @@ class LRWCache[K, V](private val initSize: Int) extends Cache[K, V] {
     }
   } finally writeLock.unlock()
 
+  def delValue(key: K): Unit = try {
+    writeLock.lock()
+    map.get(key).foreach(removeNode)
+    map.remove(key)
+  } finally writeLock.unlock()
+
   def getKeys(page: Int = 0, size: Int = 1000): List[K] = try {
     readLock.lock()
 
